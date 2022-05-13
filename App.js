@@ -121,19 +121,21 @@ const App = () => {
 
   const HomeScreen = ({navigation}) => {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, styles.homeButtons]}>
         <StatusBar barStyle={'dark-content'} />
         <Pressable onPress={() => navigation.navigate('Create Playlist')}>
-          <Text style={styles.button}>Add Playlist</Text>
+          <Text style={[styles.button, styles.homeButton]}>Add Playlist</Text>
         </Pressable>
         <Pressable onPress={() => navigation.navigate('Create Category')}>
-          <Text style={styles.button}>Add Category</Text>
+          <Text style={[styles.button, styles.homeButton]}>Add Category</Text>
         </Pressable>
         <Pressable onPress={() => navigation.navigate('Playlists')}>
-          <Text style={styles.button}>View Playlists</Text>
+          <Text style={[styles.button, styles.homeButton]}>View Playlists</Text>
         </Pressable>
         <Pressable onPress={() => navigation.navigate('Categories')}>
-          <Text style={styles.button}>View Categories</Text>
+          <Text style={[styles.button, styles.homeButton]}>
+            View Categories
+          </Text>
         </Pressable>
       </SafeAreaView>
     );
@@ -507,7 +509,7 @@ const App = () => {
         <Stack.Screen
           name="Home"
           component={HomeScreen}
-          options={{title: 'Home'}}
+          options={{title: 'Media Organiser Home'}}
         />
         <Stack.Screen name="Playlists" component={PlaylistsScreen} />
         <Stack.Screen name="Categories" component={CategoriesScreen} />
@@ -656,6 +658,12 @@ const useStyle = () => {
     },
     fullHeight: {
       height: window.height - 112,
+    },
+    homeButton: {
+      marginVertical: 8,
+    },
+    homeButtons: {
+      marginTop: window.height / 4,
     },
   });
 
