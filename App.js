@@ -64,6 +64,11 @@ const App = () => {
     setLibraryContent(filteredData);
   };
 
+  const removeCategoryItem = id => {
+    const filteredData = libraryContent.filter(item => item.categoryId !== id);
+    setLibraryContent(filteredData);
+  };
+
   const removeMediaItem = id => {
     const filteredData = itemStore.filter(item => item.id !== id);
     setItemStore(filteredData);
@@ -225,7 +230,7 @@ const App = () => {
                   </Pressable>
                   <Pressable
                     style={styles.removeButton}
-                    onPress={() => removePlaylistItem(item.categoryId)}>
+                    onPress={() => removeCategoryItem(item.categoryId)}>
                     <Text style={{color: 'white'}}>-</Text>
                   </Pressable>
                 </View>
