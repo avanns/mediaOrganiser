@@ -46,14 +46,27 @@ const App = () => {
     }
   };
 
-  const removeMediaItem = id => {
-    const filteredData = itemStore.filter(item => item.id !== id);
-    setItemStore(filteredData);
+  const createCategory = title => {
+    if (title) {
+      const id = createId(title);
+      let newCategory = {
+        categoryTitle: title,
+        categoryId: id,
+      };
+      setLibraryContent(oldPlaylist => [...oldPlaylist, newCategory]);
+    } else {
+      Alert.alert('Please enter a title');
+    }
   };
 
   const removePlaylistItem = id => {
     const filteredData = libraryContent.filter(item => item.playlistId !== id);
     setLibraryContent(filteredData);
+  };
+
+  const removeMediaItem = id => {
+    const filteredData = itemStore.filter(item => item.id !== id);
+    setItemStore(filteredData);
   };
 
   const ItemModal = ({item, modalVisible, onClose}) => {
@@ -113,50 +126,109 @@ const App = () => {
         <Pressable onPress={() => navigation.navigate('Create Playlist')}>
           <Text style={styles.button}>Add Playlist</Text>
         </Pressable>
+        <Pressable onPress={() => navigation.navigate('Create Category')}>
+          <Text style={styles.button}>Add Category</Text>
+        </Pressable>
         <Pressable onPress={() => navigation.navigate('Playlists')}>
           <Text style={styles.button}>View Playlists</Text>
+        </Pressable>
+        <Pressable onPress={() => navigation.navigate('Categories')}>
+          <Text style={styles.button}>View Categories</Text>
         </Pressable>
       </SafeAreaView>
     );
   };
 
-  const LibraryScreen = ({navigation}) => {
+  const PlaylistsScreen = ({navigation}) => {
     return (
       <View>
         <>
           <Text style={styles.title}></Text>
           <FlatList
             data={libraryContent}
-            renderItem={({item, index}) => (
-              <View style={styles.itemCard}>
-                <Pressable
-                  style={styles.mediaItem}
-                  onPress={() => {
-                    navigation.navigate('Playlist', {
-                      playlistId: item.playlistId,
-                    });
-                  }}>
-                  <Text
-                    style={styles.itemTitle}
-                    numberOfLines={1}
-                    ellipsizeMode={'middle'}>
-                    {item?.playlistTitle}
-                  </Text>
-                  <Text
-                    style={styles.itemText}
-                    numberOfLines={1}
-                    ellipsizeMode={'middle'}>
-                    {item?.uri}
-                  </Text>
-                  <Text style={styles.itemText}>{item?.type}</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.removeButton}
-                  onPress={() => removePlaylistItem(item.playlistId)}>
-                  <Text style={{color: 'white'}}>-</Text>
-                </Pressable>
-              </View>
-            )}
+            renderItem={({item, index}) =>
+              item?.playlistId ? (
+                <View style={styles.itemCard}>
+                  <Pressable
+                    style={styles.mediaItem}
+                    onPress={() => {
+                      navigation.navigate('Playlist', {
+                        playlistId: item.playlistId,
+                      });
+                    }}>
+                    <Text
+                      style={styles.itemTitle}
+                      numberOfLines={1}
+                      ellipsizeMode={'middle'}>
+                      {item?.playlistTitle}
+                    </Text>
+                    <Text
+                      style={styles.itemText}
+                      numberOfLines={1}
+                      ellipsizeMode={'middle'}>
+                      {item?.uri}
+                    </Text>
+                    <Text style={styles.itemText}>{item?.type}</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.removeButton}
+                    onPress={() => removePlaylistItem(item.playlistId)}>
+                    <Text style={{color: 'white'}}>-</Text>
+                  </Pressable>
+                </View>
+              ) : null
+            }
+          />
+        </>
+
+        <ItemModal
+          item={modalEntry}
+          modalVisible={modalVisible}
+          onClose={() => setModalVisible(false)}
+        />
+      </View>
+    );
+  };
+
+  const CategoriesScreen = ({navigation}) => {
+    return (
+      <View>
+        <>
+          <Text style={styles.title}></Text>
+          <FlatList
+            data={libraryContent}
+            renderItem={({item, index}) =>
+              item?.categoryId ? (
+                <View style={styles.itemCard}>
+                  <Pressable
+                    style={styles.mediaItem}
+                    onPress={() => {
+                      navigation.navigate('Category', {
+                        categoryId: item.categoryId,
+                      });
+                    }}>
+                    <Text
+                      style={styles.itemTitle}
+                      numberOfLines={1}
+                      ellipsizeMode={'middle'}>
+                      {item?.categoryTitle}
+                    </Text>
+                    <Text
+                      style={styles.itemText}
+                      numberOfLines={1}
+                      ellipsizeMode={'middle'}>
+                      {item?.uri}
+                    </Text>
+                    <Text style={styles.itemText}>{item?.type}</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.removeButton}
+                    onPress={() => removePlaylistItem(item.categoryId)}>
+                    <Text style={{color: 'white'}}>-</Text>
+                  </Pressable>
+                </View>
+              ) : null
+            }
           />
         </>
 
@@ -195,6 +267,32 @@ const App = () => {
     );
   };
 
+  const CreateCategoryScreen = ({navigation}) => {
+    let title;
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle={'dark-content'} />
+        <TextInput
+          placeholder="Type category title here"
+          onChangeText={text => (title = text)}
+          style={styles.playlistTextInput}
+        />
+        <Pressable
+          onPress={() => {
+            createCategory(title);
+            if (title) {
+              navigation.navigate('Categories');
+            }
+          }}
+          style={styles.bottomButton}>
+          <Text style={[styles.button, styles.bottomButtonTitle]}>
+            Create Category
+          </Text>
+        </Pressable>
+      </SafeAreaView>
+    );
+  };
+
   const PlaylistScreen = ({route}) => {
     const handleDocumentSelection = async () => {
       const addToLibrary = item => {
@@ -204,6 +302,7 @@ const App = () => {
       const addFields = response => {
         const nakedResponse = response[0];
         nakedResponse.comment = comment;
+        // nakedResponse.categoryId = '';
         nakedResponse.playlistId = currentPlaylist.playlistId;
         nakedResponse.id = createId(response[0].name);
         return nakedResponse;
@@ -227,15 +326,15 @@ const App = () => {
     const libraryContentAsArray = Object.entries(libraryContent);
 
     const getCurrentPlaylist = () => {
-      for (const playlista of libraryContentAsArray) {
-        if (playlista[1].playlistId === passedPlaylistId) {
-          const currentPlaylist = playlista[1];
+      for (const item of libraryContentAsArray) {
+        if (item[1].playlistId === passedPlaylistId) {
+          const currentPlaylist = item[1];
           return currentPlaylist;
         }
       }
     };
     const currentPlaylist = getCurrentPlaylist();
-
+    console.log(currentPlaylist);
     return (
       <View style={styles.fullHeight}>
         <>
@@ -243,7 +342,112 @@ const App = () => {
           <FlatList
             data={itemStore}
             renderItem={({item}) =>
-              item?.id && item.playlistId === currentPlaylist.playlistId ? (
+              item?.playlistId &&
+              item.playlistId === currentPlaylist.playlistId ? (
+                <View style={styles.itemCard}>
+                  <Pressable
+                    style={styles.mediaItem}
+                    onPress={() => {
+                      if (item.name) {
+                        setModalVisible(true);
+                        setModalEntry(item);
+                      }
+                    }}>
+                    <Text
+                      style={styles.itemTitle}
+                      numberOfLines={1}
+                      ellipsizeMode={'middle'}>
+                      {item?.name}
+                    </Text>
+                    <Text
+                      style={styles.itemText}
+                      numberOfLines={1}
+                      ellipsizeMode={'middle'}>
+                      {item?.uri}
+                    </Text>
+                    <Text style={styles.itemText}>{item?.type}</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.removeButton}
+                    onPress={() =>
+                      item.id
+                        ? removeMediaItem(item.id)
+                        : Alert.alert('Cannot delete')
+                    }>
+                    <Text style={{color: 'white'}}>-</Text>
+                  </Pressable>
+                </View>
+              ) : null
+            }
+          />
+        </>
+        <Pressable
+          onPress={() => handleDocumentSelection()}
+          style={styles.bottomButton2}>
+          <Text style={[styles.button, styles.bottomButtonTitle]}>
+            Add File
+          </Text>
+        </Pressable>
+        <ItemModal
+          item={modalEntry}
+          modalVisible={modalVisible}
+          onClose={() => setModalVisible(false)}
+        />
+      </View>
+    );
+  };
+
+  const CategoryScreen = ({route}) => {
+    const handleDocumentSelection = async () => {
+      const addToLibrary = item => {
+        setItemStore(oldPlaylist => [...oldPlaylist, item]);
+      };
+
+      const addFields = response => {
+        const nakedResponse = response[0];
+        nakedResponse.comment = comment;
+        // nakedResponse.playlistId = '';
+        nakedResponse.categoryId = currentCategory.categoryId;
+        nakedResponse.id = createId(response[0].name);
+        return nakedResponse;
+      };
+      try {
+        const response = await DocumentPicker.pick({
+          presentationStyle: 'fullScreen',
+          // allowMultiSelection: true,
+          copyTo: 'documentDirectory',
+        });
+
+        const mediaItem = addFields(response);
+
+        addToLibrary(mediaItem);
+      } catch (err) {
+        console.warn(err);
+      }
+    };
+
+    const passedCategoryId = route.params.categoryId;
+    const libraryContentAsArray = Object.entries(libraryContent);
+
+    const getCurrentCategory = () => {
+      for (const item of libraryContentAsArray) {
+        if (item[1].categoryId === passedCategoryId) {
+          const currentCategory = item[1];
+          return currentCategory;
+        }
+      }
+    };
+    const currentCategory = getCurrentCategory();
+
+    return (
+      <View style={styles.fullHeight}>
+        <>
+          <Text style={styles.title}>{currentCategory.categoryTitle}</Text>
+          <FlatList
+            data={itemStore}
+            renderItem={({item}) =>
+              item?.categoryId &&
+              item?.categoryId === currentCategory.categoryId ? (
                 <View style={styles.itemCard}>
                   <Pressable
                     style={styles.mediaItem}
@@ -305,7 +509,10 @@ const App = () => {
           component={HomeScreen}
           options={{title: 'Home'}}
         />
-        <Stack.Screen name="Playlists" component={LibraryScreen} />
+        <Stack.Screen name="Playlists" component={PlaylistsScreen} />
+        <Stack.Screen name="Categories" component={CategoriesScreen} />
+        <Stack.Screen name="Category" component={CategoryScreen} />
+        <Stack.Screen name="Create Category" component={CreateCategoryScreen} />
         <Stack.Screen name="Create Playlist" component={CreatePlaylistScreen} />
         <Stack.Screen name="Playlist" component={PlaylistScreen} />
       </Stack.Navigator>
