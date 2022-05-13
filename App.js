@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from 'react';
+import * as React from 'react';
 import {
   StyleSheet,
   StatusBar,
@@ -13,51 +13,46 @@ import {
 } from 'react-native';
 import DocumentPicker, {types} from 'react-native-document-picker';
 import {useWindowDimensions} from 'react-native';
+import {NavigationContainer} from '@react-navigation/native';
+import {createNativeStackNavigator} from '@react-navigation/native-stack';
 
 const App = () => {
-  // const [fileResponse, setFileResponse] = useState([]);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [modalEntry, setModalEntry] = useState();
-  const [libraryContent, setLibraryContent] = useState([]);
-  const [comment, setComment] = useState('');
+  const [modalVisible, setModalVisible] = React.useState(false);
+  const [modalEntry, setModalEntry] = React.useState();
+  const [libraryContent, setLibraryContent] = React.useState([]);
+  const [itemStore, setItemStore] = React.useState([]);
+  const [comment, setComment] = React.useState('');
   const {styles} = useStyle();
-  const [isTextInputVisible, setIsTextInputVisible] = useState(false);
+  const [isTextInputVisible, setIsTextInputVisible] = React.useState(false);
+  const Stack = createNativeStackNavigator();
 
-  const handleDocumentSelection = useCallback(async () => {
-    const addToArray = item => {
-      setLibraryContent(oldLibrary => [...oldLibrary, item]);
-    };
-    const addComment = response => {
-      const test = response[0];
-      test.comment = comment;
-      return test;
-    };
-    try {
-      const response = await DocumentPicker.pick({
-        presentationStyle: 'fullScreen',
-        type: [types.pdf],
-        // allowMultiSelection: true,
-        copyTo: 'documentDirectory',
-      });
-      const mediaItem = addComment(response);
-      addToArray(mediaItem);
-    } catch (err) {
-      console.warn(err);
+  const createId = prop => {
+    const randomNumber = Math.trunc(Math.random() * 1000);
+    const cleanProp = prop.replace(/\./g, '').replace(/\s+/g, '').toLowerCase();
+    const id = cleanProp + randomNumber;
+    return id;
+  };
+
+  const createPlaylist = title => {
+    if (title) {
+      const id = createId(title);
+      let newPlaylist = {
+        playlistTitle: title,
+        playlistId: id,
+      };
+      setLibraryContent(oldPlaylist => [...oldPlaylist, newPlaylist]);
+    } else {
+      Alert.alert('Please enter a title');
     }
-  }, []);
+  };
 
-  // const openTextInput = () => {};
+  const removeMediaItem = id => {
+    const filteredData = itemStore.filter(item => item.id !== id);
+    setItemStore(filteredData);
+  };
 
-  // const onChangeText = (text) => {
-  //   setComment(text);
-  // };
-
-  // const updateComment = (text, item) => {
-  //   item?.comment = text;
-  // };
-
-  const removeMediaItem = uri => {
-    const filteredData = libraryContent.filter(item => item.uri !== uri);
+  const removePlaylistItem = id => {
+    const filteredData = libraryContent.filter(item => item.playlistId !== id);
     setLibraryContent(filteredData);
   };
 
@@ -98,7 +93,7 @@ const App = () => {
             </View>
           ) : null}
           <Pressable
-            style={styles.bottomButton}
+            style={styles.bottomButtonAbs}
             onPress={() => {
               setIsTextInputVisible('true');
             }}>
@@ -111,32 +106,41 @@ const App = () => {
     );
   };
 
-  const LibraryArea = () => {
+  const HomeScreen = ({navigation}) => {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle={'dark-content'} />
+        <Pressable onPress={() => navigation.navigate('Create Playlist')}>
+          <Text style={styles.button}>Add Playlist</Text>
+        </Pressable>
+        <Pressable onPress={() => navigation.navigate('Playlists')}>
+          <Text style={styles.button}>View Playlists</Text>
+        </Pressable>
+      </SafeAreaView>
+    );
+  };
+
+  const LibraryScreen = ({navigation}) => {
     return (
       <View>
         <>
-          <Text style={styles.title}>Library</Text>
+          <Text style={styles.title}></Text>
           <FlatList
             data={libraryContent}
             renderItem={({item, index}) => (
-              <View>
-                <View style={styles.mediaItemHeader}>
-                  <Text style={styles.indexNumber}>{index + 1}</Text>
-                  <Pressable onPress={() => removeMediaItem(item.uri)}>
-                    <Text>X</Text>
-                  </Pressable>
-                </View>
+              <View style={styles.itemCard}>
                 <Pressable
                   style={styles.mediaItem}
                   onPress={() => {
-                    setModalVisible(true);
-                    setModalEntry(item);
+                    navigation.navigate('Playlist', {
+                      playlistId: item.playlistId,
+                    });
                   }}>
                   <Text
                     style={styles.itemTitle}
                     numberOfLines={1}
                     ellipsizeMode={'middle'}>
-                    {item?.name}
+                    {item?.playlistTitle}
                   </Text>
                   <Text
                     style={styles.itemText}
@@ -146,12 +150,144 @@ const App = () => {
                   </Text>
                   <Text style={styles.itemText}>{item?.type}</Text>
                 </Pressable>
+                <Pressable
+                  style={styles.removeButton}
+                  onPress={() => removePlaylistItem(item.playlistId)}>
+                  <Text style={{color: 'white'}}>-</Text>
+                </Pressable>
               </View>
             )}
-            numColumns={2}
-            keyExtractor={(item, index) => `${item.key}${index}`}
           />
         </>
+
+        <ItemModal
+          item={modalEntry}
+          modalVisible={modalVisible}
+          onClose={() => setModalVisible(false)}
+        />
+      </View>
+    );
+  };
+
+  const CreatePlaylistScreen = ({navigation}) => {
+    let title;
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle={'dark-content'} />
+        <TextInput
+          placeholder="Type playlist title here"
+          onChangeText={text => (title = text)}
+          style={styles.playlistTextInput}
+        />
+        <Pressable
+          onPress={() => {
+            createPlaylist(title);
+            if (title) {
+              navigation.navigate('Playlists');
+            }
+          }}
+          style={styles.bottomButton}>
+          <Text style={[styles.button, styles.bottomButtonTitle]}>
+            Create Playlist
+          </Text>
+        </Pressable>
+      </SafeAreaView>
+    );
+  };
+
+  const PlaylistScreen = ({route}) => {
+    const handleDocumentSelection = async () => {
+      const addToLibrary = item => {
+        setItemStore(oldPlaylist => [...oldPlaylist, item]);
+      };
+
+      const addFields = response => {
+        const nakedResponse = response[0];
+        nakedResponse.comment = comment;
+        nakedResponse.playlistId = currentPlaylist.playlistId;
+        nakedResponse.id = createId(response[0].name);
+        return nakedResponse;
+      };
+      try {
+        const response = await DocumentPicker.pick({
+          presentationStyle: 'fullScreen',
+          // allowMultiSelection: true,
+          copyTo: 'documentDirectory',
+        });
+
+        const mediaItem = addFields(response);
+
+        addToLibrary(mediaItem);
+      } catch (err) {
+        console.warn(err);
+      }
+    };
+
+    const passedPlaylistId = route.params.playlistId;
+    const libraryContentAsArray = Object.entries(libraryContent);
+
+    const getCurrentPlaylist = () => {
+      for (const playlista of libraryContentAsArray) {
+        if (playlista[1].playlistId === passedPlaylistId) {
+          const currentPlaylist = playlista[1];
+          return currentPlaylist;
+        }
+      }
+    };
+    const currentPlaylist = getCurrentPlaylist();
+
+    return (
+      <View style={styles.fullHeight}>
+        <>
+          <Text style={styles.title}>{currentPlaylist.playlistTitle}</Text>
+          <FlatList
+            data={itemStore}
+            renderItem={({item}) =>
+              item?.id && item.playlistId === currentPlaylist.playlistId ? (
+                <View style={styles.itemCard}>
+                  <Pressable
+                    style={styles.mediaItem}
+                    onPress={() => {
+                      if (item.name) {
+                        setModalVisible(true);
+                        setModalEntry(item);
+                      }
+                    }}>
+                    <Text
+                      style={styles.itemTitle}
+                      numberOfLines={1}
+                      ellipsizeMode={'middle'}>
+                      {item?.name}
+                    </Text>
+                    <Text
+                      style={styles.itemText}
+                      numberOfLines={1}
+                      ellipsizeMode={'middle'}>
+                      {item?.uri}
+                    </Text>
+                    <Text style={styles.itemText}>{item?.type}</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.removeButton}
+                    onPress={() =>
+                      item.id
+                        ? removeMediaItem(item.id)
+                        : Alert.alert('Cannot delete')
+                    }>
+                    <Text style={{color: 'white'}}>-</Text>
+                  </Pressable>
+                </View>
+              ) : null
+            }
+          />
+        </>
+        <Pressable
+          onPress={() => handleDocumentSelection()}
+          style={styles.bottomButton2}>
+          <Text style={[styles.button, styles.bottomButtonTitle]}>
+            Add File
+          </Text>
+        </Pressable>
         <ItemModal
           item={modalEntry}
           modalVisible={modalVisible}
@@ -162,24 +298,18 @@ const App = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle={'dark-content'} />
-      <LibraryArea style={styles.libraryArea} />
-      {/* <ItemCard /> */}
-      {/* {fileResponse.map((file, index) => (
-        <MediaItem
-          key={index.toString()}
-          numberOfLines={1}
-          ellipsizeMode={'middle'}
-          file={file}
+    <NavigationContainer>
+      <Stack.Navigator>
+        <Stack.Screen
+          name="Home"
+          component={HomeScreen}
+          options={{title: 'Home'}}
         />
-      ))} */}
-      <Pressable onPress={handleDocumentSelection} style={styles.bottomButton}>
-        <Text style={[styles.button, styles.bottomButtonTitle]}>
-          Select File
-        </Text>
-      </Pressable>
-    </SafeAreaView>
+        <Stack.Screen name="Playlists" component={LibraryScreen} />
+        <Stack.Screen name="Create Playlist" component={CreatePlaylistScreen} />
+        <Stack.Screen name="Playlist" component={PlaylistScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 };
 
@@ -210,7 +340,7 @@ const useStyle = () => {
       borderRadius: 10,
       textAlign: 'center',
     },
-    libraryArea: {
+    playlistScreen: {
       padding: 48,
     },
     mediaItem: {
@@ -218,12 +348,13 @@ const useStyle = () => {
       margin: 8,
       padding: 8,
       borderRadius: 5,
-      width: (window.width - 32) / 2,
+      width: window.width - 32 - 44,
       backgroundColor: colours.tertiary,
     },
     title: {
       marginLeft: 8,
       marginBottom: 16,
+      marginTop: 8,
       fontSize: 24,
       color: colours.primary,
     },
@@ -259,17 +390,25 @@ const useStyle = () => {
     },
     bottomButton: {
       position: 'absolute',
-      bottom: 0,
-      width: '100%',
+      bottom: 64,
+      width: window.width,
       textAlign: 'center',
       fontSize: 48,
+    },
+    bottomButton2: {
+      position: 'absolute',
+      width: window.width,
+      marginTop: window.height - 112,
+    },
+    bottomButtonAbs: {
+      position: 'absolute',
+      bottom: 0,
+      width: window.width,
     },
     bottomButtonTitle: {
       fontSize: 20,
     },
     indexNumber: {
-      // backgroundColor: 'white',
-      width: 12,
       borderRadius: 4,
       textAlign: 'center',
     },
@@ -280,14 +419,36 @@ const useStyle = () => {
       fontSize: 18,
     },
     textInput: {
-      // position: 'absolute',
-      // bottom: 100,
       alignItems: 'center',
       justifyContent: 'center',
       marginTop: window.height - 100,
       width: '100%',
       height: 48,
       backgroundColor: colours.tertiary,
+    },
+    playlistTextInput: {
+      marginTop: window.height / 3,
+      textAlign: 'center',
+      backgroundColor: 'white',
+      height: 44,
+    },
+    removeButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 100,
+      backgroundColor: 'black',
+      color: 'white',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 8,
+    },
+    itemCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    fullHeight: {
+      height: window.height - 112,
     },
   });
 
